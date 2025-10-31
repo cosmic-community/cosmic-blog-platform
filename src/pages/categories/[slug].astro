@@ -1,0 +1,91 @@
+---
+export interface Props {
+  category: any; // TODO: Define proper type
+}
+
+// src/pages/categories/[slug].astro
+import Layout from '@/layouts/Layout.astro'
+import Navigation from '@/components/Navigation.astro'
+import Footer from '@/components/Footer.astro'
+import PostCard from '@/components/PostCard.astro'
+import CosmicBadge from '@/components/CosmicBadge.astro'
+import { cosmic, hasStatus } from '@/lib/cosmic'
+import type { Category, Post } from '@/types'
+
+export async function getStaticPaths() {
+  try {
+    const response = await cosmic.objects
+      .find({ type: 'categories' })
+      .props(['id', 'title', 'slug', 'metadata'])
+    
+    return response.objects.map((category: Category) => ({
+      params: { slug: category.slug },
+      props: { category }
+    }))
+  } catch (error) {
+    if (hasStatus(error) && error.status === 404) {
+      return []
+    }
+    throw error
+  }
+}
+
+const { category } = Astro.props as { category: Category }
+
+let posts: Post[] = []
+
+try {
+  const response = await cosmic.objects
+    .find({ 
+      type: 'posts',
+      'metadata.categories': category.id
+    })
+    .props(['id', 'title', 'slug', 'metadata'])
+    .depth(1)
+  
+  posts = (response.objects as Post[]).sort((a, b) => {
+    const dateA = new Date(a.metadata?.published_date || '').getTime()
+    const dateB = new Date(b.metadata?.published_date || '').getTime()
+    return dateB - dateA
+  })
+} catch (error) {
+  if (hasStatus(error) && error.status === 404) {
+    posts = []
+  } else {
+    console.error('Error fetching posts:', error)
+  }
+}
+
+const bucketSlug = import.meta.env.COSMIC_BUCKET_SLUG
+---
+
+<Layout 
+  title={`${category.title} - Cosmic Blog`}
+  description={category.metadata.description || `Browse posts in ${category.title}`}
+>
+  <Navigation />
+  <main class="min-h-screen">
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div class="mb-12">
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">{category.title}</h1>
+        {category.metadata.description && (
+          <p class="text-xl text-gray-600">{category.metadata.description}</p>
+        )}
+      </div>
+
+      {posts.length === 0 ? (
+        <div class="text-center py-12">
+          <p class="text-gray-600 text-lg">No posts in this category yet.</p>
+        </div>
+      ) : (
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {posts.map((post) => (
+            <PostCard post={post} />
+          ))}
+        </div>
+      )}
+    </section>
+  </main>
+  <Footer />
+  <CosmicBadge bucketSlug={bucketSlug} />
+</Layout>

@@ -1,0 +1,62 @@
+---
+// src/components/AuthorInfo.astro
+import type { Author } from '@/types'
+
+export interface Props {
+  author: Author
+  showBio?: boolean
+}
+
+const { author, showBio = false } = Astro.props
+
+const avatar = author.metadata.avatar?.imgix_url
+const bio = author.metadata.bio
+const twitter = author.metadata.twitter
+const linkedin = author.metadata.linkedin
+---
+
+<div class="flex items-start space-x-4">
+  {avatar && (
+    <img 
+      src={`${avatar}?w=160&h=160&fit=crop&auto=format,compress`}
+      alt={author.title}
+      class="w-16 h-16 rounded-full object-cover"
+      width="64"
+      height="64"
+    />
+  )}
+  <div class="flex-1">
+    <h3 class="text-lg font-bold text-gray-900">
+      <a href={`/authors/${author.slug}`} class="hover:text-primary">
+        {author.title}
+      </a>
+    </h3>
+    {showBio && bio && (
+      <p class="text-gray-600 mt-2">{bio}</p>
+    )}
+    {(twitter || linkedin) && (
+      <div class="flex items-center space-x-4 mt-2">
+        {twitter && (
+          <a 
+            href={`https://twitter.com/${twitter.replace('@', '')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-gray-500 hover:text-primary text-sm"
+          >
+            Twitter
+          </a>
+        )}
+        {linkedin && (
+          <a 
+            href={linkedin}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-gray-500 hover:text-primary text-sm"
+          >
+            LinkedIn
+          </a>
+        )}
+      </div>
+    )}
+  </div>
+</div>

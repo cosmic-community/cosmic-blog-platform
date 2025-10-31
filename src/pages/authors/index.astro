@@ -1,0 +1,62 @@
+---
+// src/pages/authors/index.astro
+import Layout from '@/layouts/Layout.astro'
+import Navigation from '@/components/Navigation.astro'
+import Footer from '@/components/Footer.astro'
+import AuthorInfo from '@/components/AuthorInfo.astro'
+import CosmicBadge from '@/components/CosmicBadge.astro'
+import { cosmic, hasStatus } from '@/lib/cosmic'
+import type { Author } from '@/types'
+
+let authors: Author[] = []
+
+try {
+  const response = await cosmic.objects
+    .find({ type: 'authors' })
+    .props(['id', 'title', 'slug', 'metadata'])
+  
+  authors = response.objects as Author[]
+} catch (error) {
+  if (hasStatus(error) && error.status === 404) {
+    authors = []
+  } else {
+    console.error('Error fetching authors:', error)
+  }
+}
+
+const bucketSlug = import.meta.env.COSMIC_BUCKET_SLUG
+---
+
+<Layout title="Authors - Cosmic Blog">
+  <Navigation />
+  <main class="min-h-screen">
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <h1 class="text-4xl font-bold text-gray-900 mb-4">Our Authors</h1>
+      <p class="text-xl text-gray-600 mb-12">
+        Meet the talented writers behind our content
+      </p>
+
+      {authors.length === 0 ? (
+        <div class="text-center py-12">
+          <p class="text-gray-600 text-lg">No authors available yet.</p>
+        </div>
+      ) : (
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {authors.map((author) => (
+            <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow duration-200">
+              <AuthorInfo author={author} showBio={true} />
+              <a 
+                href={`/authors/${author.slug}`}
+                class="inline-block mt-4 text-primary hover:text-primary-dark font-medium"
+              >
+                View Posts →
+              </a>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  </main>
+  <Footer />
+  <CosmicBadge bucketSlug={bucketSlug} />
+</Layout>

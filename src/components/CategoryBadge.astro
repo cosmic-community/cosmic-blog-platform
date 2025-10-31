@@ -1,0 +1,26 @@
+---
+// src/components/CategoryBadge.astro
+import type { Category } from '@/types'
+
+export interface Props {
+  category: Category
+}
+
+const { category } = Astro.props
+---
+
+<a 
+  href={`/categories/${category.slug}`}
+  class="inline-flex items-center space-x-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:border-primary hover:shadow-md transition-all duration-200"
+>
+  {category.metadata.icon?.imgix_url && (
+    <img 
+      src={`${category.metadata.icon.imgix_url}?w=64&h=64&fit=crop&auto=format,compress`}
+      alt={category.title}
+      class="w-6 h-6 object-cover rounded"
+      width="24"
+      height="24"
+    />
+  )}
+  <span class="font-medium text-gray-900">{category.title}</span>
+</a>

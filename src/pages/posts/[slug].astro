@@ -1,0 +1,122 @@
+---
+export interface Props {
+  post: any; // TODO: Define proper type
+}
+
+// src/pages/posts/[slug].astro
+import Layout from '@/layouts/Layout.astro'
+import Navigation from '@/components/Navigation.astro'
+import Footer from '@/components/Footer.astro'
+import AuthorInfo from '@/components/AuthorInfo.astro'
+import CosmicBadge from '@/components/CosmicBadge.astro'
+import { cosmic, hasStatus } from '@/lib/cosmic'
+import type { Post } from '@/types'
+import { marked } from 'marked'
+
+export async function getStaticPaths() {
+  try {
+    const response = await cosmic.objects
+      .find({ type: 'posts' })
+      .props(['id', 'title', 'slug', 'metadata'])
+      .depth(1)
+    
+    return response.objects.map((post: Post) => ({
+      params: { slug: post.slug },
+      props: { post }
+    }))
+  } catch (error) {
+    if (hasStatus(error) && error.status === 404) {
+      return []
+    }
+    throw error
+  }
+}
+
+const { post } = Astro.props as { post: Post }
+
+const content = post.metadata.content || ''
+const htmlContent = marked(content)
+const featuredImage = post.metadata.featured_image?.imgix_url
+const author = post.metadata.author
+const categories = post.metadata.categories || []
+const publishedDate = post.metadata.published_date
+
+const formattedDate = publishedDate 
+  ? new Date(publishedDate).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    })
+  : ''
+
+const bucketSlug = import.meta.env.COSMIC_BUCKET_SLUG
+---
+
+<Layout 
+  title={`${post.title} - Cosmic Blog`}
+  description={post.metadata.excerpt || post.title}
+  image={featuredImage}
+>
+  <Navigation />
+  <main class="min-h-screen">
+    <article class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <!-- Post Header -->
+      <header class="mb-8">
+        {categories.length > 0 && (
+          <div class="flex flex-wrap gap-2 mb-4">
+            {categories.map((category) => (
+              <a 
+                href={`/categories/${category.slug}`}
+                class="inline-block px-3 py-1 text-sm font-medium text-primary bg-blue-50 rounded-full hover:bg-blue-100"
+              >
+                {category.title}
+              </a>
+            ))}
+          </div>
+        )}
+        
+        <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+          {post.title}
+        </h1>
+        
+        <div class="flex items-center justify-between text-gray-600 mb-6">
+          {formattedDate && (
+            <time datetime={publishedDate}>{formattedDate}</time>
+          )}
+        </div>
+
+        {author && (
+          <div class="border-t border-b border-gray-200 py-6 mb-8">
+            <AuthorInfo author={author} showBio={true} />
+          </div>
+        )}
+      </header>
+
+      <!-- Featured Image -->
+      {featuredImage && (
+        <div class="mb-8">
+          <img 
+            src={`${featuredImage}?w=1600&h=800&fit=crop&auto=format,compress`}
+            alt={post.title}
+            class="w-full h-auto rounded-lg shadow-lg"
+            width="800"
+            height="400"
+          />
+        </div>
+      )}
+
+      <!-- Post Content -->
+      <div class="prose prose-lg max-w-none" set:html={htmlContent} />
+
+      <!-- Author Bio -->
+      {author && (
+        <div class="mt-12 pt-8 border-t border-gray-200">
+          <h3 class="text-xl font-bold text-gray-900 mb-4">About the Author</h3>
+          <AuthorInfo author={author} showBio={true} />
+        </div>
+      )}
+    </article>
+  </main>
+  <Footer />
+  <CosmicBadge bucketSlug={bucketSlug} />
+</Layout>
